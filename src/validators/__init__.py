@@ -10,7 +10,7 @@ _T_VALIDATION_FUNCTION = TypeVar("_T_VALIDATION_FUNCTION", bound=ValidationFunct
 VALIDATORS_REGISTRY: list[tuple[ValidationFunction, set[type[BaseConfig]]]] = []
 
 
-def register_validator(*config_types):
+def register_validator(*config_types: type[BaseConfig]) -> Callable[[_T_VALIDATION_FUNCTION], _T_VALIDATION_FUNCTION]:
     def decorator(func: _T_VALIDATION_FUNCTION) -> _T_VALIDATION_FUNCTION:
         VALIDATORS_REGISTRY.append((func, set(config_types)))
         return func
