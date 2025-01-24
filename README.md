@@ -1,71 +1,82 @@
-# Config Validation Architecture
+# Configuration Validation Architecture
 
-This project demonstrates a **modular** approach for loading JSON configuration files and validating them.  
-We separate the concerns of:
-
-1. **Loading config files** into Pydantic-based data models (and performing single-file validations).  
-2. **Cross-file validations** for constraints that span multiple config types.
+This repository provides a robust system for defining, loading, and validating configuration files using [Pydantic](https://docs.pydantic.dev/) models and custom validation rules. By splitting out **loading**, **single-file** (Pydantic) validations, and **cross-file** validations, we achieve a scalable, maintainable, and easily extensible architecture.
 
 ---
 
-## 1. Architecture & Benefits
-
-### 1.1. Layers of Responsibility
-
-1. **Model Layer (Pydantic)**  
-   - Each config file corresponds to a Pydantic model that extends a shared `BaseConfig`.  
-   - This layer is responsible for describing field structures and single-file validations (e.g., using `@root_validator` or `@validator`).  
-
-2. **Config Loader**  
-   - Scans a directory for JSON files.  
-   - Matches each file by filename to a Pydantic model (via `@register_config_model`).  
-   - Instantiates the models. If a Pydantic `ValidationError` arises, it can be caught and translated into custom error types (`BaseValidationError`).
-
-3. **Cross-File Validation (Validators)**  
-   - Complex constraints that involve **multiple config models** are implemented as small, independent validation functions.  
-   - Each validation function is decorated with `@register_validation`, which auto-registers it.  
-   - A runner (`run_validations`) automatically calls all registered validations, passing in the relevant config objects.
-
-### 1.2. Benefits
-
-- **Modularity**:  
-  - Each config file has its own dedicated Pydantic model.  
-  - Cross-file checks are isolated into small functions, avoiding one huge “god” validator class.  
-
-- **Ease of Extension**:  
-  - Adding a new config requires creating a JSON file and a corresponding Pydantic model with `@register_config_model`.  
-  - Cross-file validations are added by simply writing a new function with `@register_validation`.  
-  - No need to modify a monolithic loader or a single “mega-validation” method.
-
-- **Clarity & Maintainability**:  
-  - Single-file data constraints stay where they belong—in each model.  
-  - Multi-file relationships are handled by small, focused validation functions.  
-  - No large classes or complicated condition checks spread across the codebase.
-
-- **Testability**:  
-  - You can test each model independently for single-file validation.  
-  - You can test each cross-file validator function in isolation.  
+## Table of Contents
+1. [Overview of the Architecture](#overview-of-the-architecture)
+2. [Benefits](#benefits)
+3. [Folder Structure](#folder-structure)
+4. [How to Use](#how-to-use)
+5. [Adding New Configs](#adding-new-configs)
+   - [5.1 Create a New Pydantic Model](#51-create-a-new-pydantic-model)
+   - [5.2 Add Single-File Validation](#52-add-single-file-validation)
+   - [5.3 Register a Cross-File Validation](#53-register-a-cross-file-validation)
 
 ---
 
-## 2. Directory Structure
+## Overview of the Architecture
 
-An example layout:
+1. **`BaseConfig` (Single-File Validation Layer):**  
+   Each configuration file is defined as a subclass of `BaseConfig`, a thin wrapper around Pydantic’s `BaseModel`. This layer is actually optional, but can be beneficial to provide more control. It is used in various type hints to represent a pydantic model that is also a config.
+
+2. **`ConfigLoader` (I/O and Registration):**  
+   - Uses a registry-based approach (`@register_config_model`) to map a JSON filename to a corresponding Pydantic model.  
+   - Iterates over `.json` files in a specified directory, parses them, and instantiates each registered model.  
+   - Catches Pydantic `ValidationError` and converts them into custom single-file validation exceptions when necessary.
+
+3. **Cross-File Validation (Multi-Model Checks):**  
+   - Implemented as independent functions, each describing a particular rule that might involve multiple config models.  
+   - Decorated with `@register_validation`.  
+   - Automatically discovered and run by `run_validations(...)`, passing the relevant config objects as function arguments.
+
+4. **Custom Exceptions** (in `exceptions.py`):  
+   - `BaseValidationError` as a parent for all validation-related issues.  
+   - `BaseSingleConfigValidationError` for single-file issues.  
+   - `BaseCrossConfigValidationError` for cross-file issues.  
+   - Additional specialized exceptions like `ConfigCreationFailedError` for loader errors.
+
+---
+
+## Benefits
+
+- **Clear Separation of Concerns**  
+  - **Model definitions** focus on describing data structures (fields, types, and single-file constraints via Pydantic).  
+  - **Loading** is centralized in `ConfigLoader`, which references a registry of models and gracefully handles errors.  
+  - **Cross-file validations** are modular functions, each dealing with a specific multi-model rule.
+
+- **Ease of Extension**  
+  - **Add a new config** by creating a Pydantic model and decorating it with `@register_config_model`.  
+  - **Add a new cross-file validation** by writing a small function, decorating with `@register_validation`, and importing it.  
+
+- **Maintainable and Testable**  
+  - Single-file validation is testable in isolation (e.g., by instantiating Pydantic models directly).  
+  - Cross-file validations are also testable in isolation (pass mock or real config objects to each validator function).  
+  - No “god classes” or “mega loader” methods.
+
+- **Robust Error Handling**  
+  - All validation errors are custom classes (`BaseValidationError`, etc.), making them easily identifiable and processable.  
+  - The loader can either raise on errors or accumulate them, depending on your use case.
+
+---
+
+## Folder Structure
 
 ```
 my_project/
 ├─ src/
-│  ├─ config_loader.py
-│  ├─ exceptions.py
+│  ├─ config_loader.py           # The core loader, with a registry-based approach
+│  ├─ exceptions.py              # Custom exception classes for validation
 │  ├─ validators/
-│  │  ├─ validations_runner.py
+│  │  ├─ validations_runner.py   # Register/call cross-file validators
 │  │  ├─ feature_subfeature_validator.py
-│  │  └─ ...
+│  │  └─ ...                     # Other cross-file validators
 │  └─ models/
-│     base_config.py
+│     ├─ base_config.py          # Base Pydantic model
 │     ├─ feature_config.py
 │     ├─ subfeature_config.py
-│     └─ ...
+│     └─ ...                     # Additional config models
 ├─ tests/
 │  └─ test_resources/
 │     ├─ valid_configs/
@@ -77,45 +88,49 @@ my_project/
 └─ main.py
 ```
 
-1. **`src/models/`**: Holds all Pydantic models.  
-2. **`src/config_loader.py`**: Implements `ConfigLoader`, which loads JSON files and instantiates Pydantic models.  
-3. **`src/validators/`**: Contains multiple modules of cross-file validation logic, plus a `validations_runner.py` that orchestrates the registered validations.  
-4. **`tests/test_resources/valid_configs/`**: Example JSON files.  
-5. **`main.py`**: Entry point to load configs and run validations.
+- **`config_loader.py`** uses a decorator `@register_config_model` to map JSON filenames to model classes, then loads them into memory, catching and converting Pydantic errors.  
+- **`exceptions.py`** provides our custom exceptions (`BaseValidationError`, etc.).  
+- **`base_config.py`** provides `BaseConfig` (a `pydantic.BaseModel` subclass).  
+- **`validations_runner.py`** collects cross-file validations (using `@register_validation`) and runs them with `run_validations()`.  
+- **`feature_subfeature_validator.py`** is an example cross-file rule that checks references from `FeatureConfig` to `SubFeatureConfig`.  
 
 ---
 
-## 3. Usage
+## How to Use
 
-### 3.1. Running the Program
+1. **Instantiate `ConfigLoader`** with a directory path (e.g. `tests/test_resources/valid_configs/`).  
+2. **Call** `load_configs(should_raise_on_error=True/False)`:
+   - Returns a `ConfigLoadResult` object containing:
+     - A dictionary of `{model_class: model_instance}` for each successfully loaded config.  
+     - A list of single-file validation errors (if any).  
+   - If `should_raise_on_error=True`, it raises a `BaseValidationError` immediately if there are any single-file errors.  
 
-1. **Place** your `.json` config files in the designated directory (e.g., `tests/test_resources/valid_configs/`).  
-2. **Run** the `main.py` script, which in turn:  
-   - Instantiates a `ConfigLoader` pointing to `tests/test_resources/valid_configs/`.  
-   - Loads each JSON into the respective Pydantic model.  
-   - Invokes `run_validations()` to perform cross-file checks.
+3. **Pass the loaded configs** to `run_validations(configs_dict)`:
+   - Runs every cross-file validation function that has been registered.  
+   - Returns a list of cross-file `BaseValidationError` objects (if any).
 
-A sample `main.py` might look like this:
+Example minimal usage in `main.py`:
 
 ```python
 from pathlib import Path
-
 from src.config_loader import ConfigLoader
-from src.validators import validations_runner
+from src.validators.validations_runner import run_validations
 
 def main():
-    # Point to the directory containing JSON files
     loader = ConfigLoader(Path("./tests/test_resources/valid_configs"))
-    available_configs = loader.load_configs()
+    load_result = loader.load_configs(should_raise_on_error=False)
+    configs, single_file_errors = load_result.unpack()
 
-    # Run cross-file validations
-    errors = validations_runner.run_validations(available_configs)
+    # Print single-file errors
+    for err in single_file_errors:
+        print("Single-file validation error:", err)
 
-    if errors:
-        for err in errors:
-            print(f"Validation Error: {err}")
-    else:
-        print("All cross-file validations passed!")
+    # Cross-file checks
+    cross_file_errors = run_validations(configs)
+    for err in cross_file_errors:
+        print("Cross-file validation error:", err)
+
+    print("Done!")
 
 if __name__ == "__main__":
     main()
@@ -123,187 +138,101 @@ if __name__ == "__main__":
 
 ---
 
-## 4. Adding a New Config Model
+## Adding New Configs
 
-Below is a **detailed** example of adding a new config file—**`AwesomeFeatureConfig.json`**—and hooking it into both single-file and cross-file validations.
+### 5.1. Create a New Pydantic Model
 
-### 4.1. Create the JSON File
+1. **Define** a new subclass of `BaseConfig` in `src/models/`.  
+2. **Decorate** it with `@register_config_model(filename="SomeNewConfig.json")` so that the loader knows which JSON file it corresponds to.
 
-Create a file named **`AwesomeFeatureConfig.json`** in `tests/test_resources/valid_configs/`, with contents like:
+**Example**:
+```python
+# src/models/some_new_config.py
 
+from pydantic import Field
+from ..models.base_config import BaseConfig
+from ..config_loader import register_config_model
+
+@register_config_model(filename="SomeNewConfig.json")
+class SomeNewConfig(BaseConfig):
+    # Define fields
+    required_field: int = Field(..., ge=1, description="Must be >= 1")
+    optional_field: str | None = None
+```
+
+Place a **`SomeNewConfig.json`** file in your configs folder (e.g., `tests/test_resources/valid_configs/`), matching whatever structure you need:
 ```json
 {
-  "enabled": true,
-  "threshold": 150
+  "required_field": 42,
+  "optional_field": "example text"
 }
 ```
 
-### 4.2. Define the New Pydantic Model
+### 5.2. Add Single-File Validation
 
-In `src/models/awesome_feature_config.py` (or a similar filename):
+Pydantic allows you to define single-file constraints in multiple ways:
 
-```python
-from pydantic import root_validator
-from ..config_loader import register_config_model
-from .base_config import BaseConfig
-from ..validators.validation_exceptions import BaseValidationError
+- **Field constraints** (like `ge=1` above).  
+- **`@validator` or `@root_validator`** to implement custom logic.
 
-@register_config_model(filename="AwesomeFeatureConfig.json")
-class AwesomeFeatureConfig(BaseConfig):
-    enabled: bool
-    threshold: int
+If a JSON input violates these constraints, a `pydantic.ValidationError` is raised and then translated to a `BaseSingleConfigValidationError` inside the loader.
 
-    @root_validator
-    def check_threshold(cls, values):
-        threshold = values.get("threshold")
-        if threshold > 1000:
-            # This raises a Pydantic ValidationError internally
-            raise ValueError("Threshold must not exceed 1000")
-        return values
-```
-
-**Key Points**:
-- `@register_config_model(filename="AwesomeFeatureConfig.json")` ties the model to that JSON file.  
-- Any single-file constraints you need can be placed here (or using `@validator` decorators).
-
-### 4.3. Handling Pydantic Validation Errors
-
-If `threshold` is too large or the JSON is malformed, Pydantic will raise a `ValidationError`.  
-To convert that to our custom `BaseValidationError`, we do something like this in `config_loader.py`:
+Example `@validator`:
 
 ```python
-import json
-from pathlib import Path
-from pydantic import ValidationError
-from typing import Callable, TypeVar
+from pydantic import validator
 
-from src.models.base_config import BaseConfig
-from src.validators.validation_exceptions import BaseValidationError
+@register_config_model(filename="SomeNewConfig.json")
+class SomeNewConfig(BaseConfig):
+    required_field: int
+    optional_field: str | None = None
 
-_MODEL_REGISTRY: dict[str, type[BaseConfig]] = {}
-_T_CONFIG_TYPE = TypeVar("_T_CONFIG_TYPE", bound=type[BaseConfig])
-
-def register_config_model(*, filename: str) -> Callable[[_T_CONFIG_TYPE], _T_CONFIG_TYPE]:
-    def decorator(cls: _T_CONFIG_TYPE) -> _T_CONFIG_TYPE:
-        _MODEL_REGISTRY[filename] = cls
-        return cls
-    return decorator
-
-class ConfigLoader:
-    def __init__(self, configs_dir: Path) -> None:
-        self.configs_dir = configs_dir
-
-    def load_configs(self) -> dict[type[BaseConfig], BaseConfig]:
-        configs = {}
-        for file in self.configs_dir.glob("*.json"):
-            if file.name not in _MODEL_REGISTRY:
-                continue
-
-            config_cls = _MODEL_REGISTRY[file.name]
-            try:
-                data = json.loads(file.read_text())
-                configs[config_cls] = config_cls(**data)
-            except ValidationError as e:
-                print(f"Error loading '{file.name}':")
-                for err in e.errors():
-                    # Convert pydantic's error to your BaseValidationError
-                    msg = err.get("msg", "Unknown error")
-                    loc = err.get("loc", [])
-                    print(BaseValidationError(f"Pydantic validation failed: {msg}", location=loc))
-
-        return configs
+    @validator("required_field")
+    def check_required_field(cls, val):
+        if val > 100:
+            raise ValueError("required_field must not exceed 100")
+        return val
 ```
 
-### 4.4. Adding a Cross-File Validator
+### 5.3. Register a Cross-File Validation
 
-Let’s say we want a rule: **If** `AwesomeFeatureConfig` is enabled **AND** `FeatureConfig` includes a feature named `"SomeFeature"`, then `threshold` must be at least `100`.
+If you need to enforce a rule involving **multiple** config models, write a **function** with typed parameters:
 
-1. Create a file: `src/validators/awesome_feature_validator.py`:
+1. **Annotate** the parameters with the model classes you need.  
+2. **Decorate** the function with `@register_validation`.  
+3. **Return** an iterable of `BaseValidationError` objects (or none if no issues).
 
-   ```python
-   from typing import Iterable
-   from .validations_runner import register_validation
-   from ..models.feature_config import FeatureConfig
-   from ..models.awesome_feature_config import AwesomeFeatureConfig
-   from .validation_exceptions import BaseValidationError
+**Example** (`src/validators/some_new_cross_validator.py`):
 
-   @register_validation
-   def validate_awesome_feature_threshold(
-       awesome_cfg: AwesomeFeatureConfig,
-       feature_cfg: FeatureConfig
-   ) -> Iterable[BaseValidationError]:
-       errors = []
-       if awesome_cfg.enabled:
-           has_some_feature = any(f.name == "SomeFeature" for f in feature_cfg.features)
-           if has_some_feature and awesome_cfg.threshold < 100:
-               errors.append(BaseValidationError(
-                   "Threshold must be >= 100 when SomeFeature is present!",
-                   threshold=awesome_cfg.threshold
-               ))
-       return errors
-   ```
+```python
+from typing import Iterable
+from ..exceptions import BaseCrossConfigValidationError, BaseValidationError
+from ..models.some_new_config import SomeNewConfig
+from ..models.feature_config import FeatureConfig
+from .validations_runner import register_validation
 
-2. **Import** that validator so the decorator runs. In `src/validators/__init__.py`:
+@register_validation
+def ensure_feature_and_newconfig_are_consistent(
+    new_cfg: SomeNewConfig,
+    feature_cfg: FeatureConfig
+) -> Iterable[BaseValidationError]:
+    errors = []
+    # Example cross-check
+    if new_cfg.required_field < 50 and any(f.name == "SpecialFeature" for f in feature_cfg.features):
+        errors.append(BaseCrossConfigValidationError(
+            "SpecialFeature requires required_field >= 50"
+        ))
+    return errors
+```
 
-   ```python
-   from . import feature_subfeature_validator
-   from . import awesome_feature_validator  # Ensure it's imported
-   ```
-
-3. Now, when `run_validations()` is called, it will automatically pick up `validate_awesome_feature_threshold()` **if** both `AwesomeFeatureConfig` and `FeatureConfig` are loaded.
+**Important**: Make sure the module is imported (either in `validators/__init__.py` or directly in your code) so that the decorator actually runs. Once imported, the validation is automatically executed in `run_validations()` if both `SomeNewConfig` and `FeatureConfig` are loaded.
 
 ---
 
-## 5. Example Files & Testing
+### Final Notes
 
-### 5.1. Example Directory and Files
+- **Single-file validations** remain where they belong—in each Pydantic model class.  
+- **Cross-file validations** are decoupled, living in small modules or functions.  
+- The **loader** is the only place that deals with I/O and error translation, keeping your code maintainable.
 
-Under `tests/test_resources/valid_configs/`, you might have:
-
-- **`FeatureConfig.json`**:
-  ```json
-  {
-    "features": [
-      {
-        "name": "SomeFeature",
-        "subfeature_names": ["sub_1", "sub_2"]
-      }
-    ]
-  }
-  ```
-- **`AwesomeFeatureConfig.json`**:
-  ```json
-  {
-    "enabled": true,
-    "threshold": 50
-  }
-  ```
-- **`SubFeatureConfig.json`**:
-  ```json
-  {
-    "subfeatures": [
-      { "name": "sub_1" },
-      { "name": "sub_2" }
-    ]
-  }
-  ```
-
-When you run your `main.py`, the loader will instantiate all three configs, then **`validate_awesome_feature_threshold`** will see:
-
-- `awesome_cfg.enabled == true`  
-- `FeatureConfig` has `"SomeFeature"`  
-- `awesome_cfg.threshold` is `50` -> This triggers a cross-file validation **error** because it’s less than `100`.
-
-You’ll see a `BaseValidationError` printed with `"Threshold must be >= 100 when SomeFeature is present!"`.
-
----
-
-## 6. Summary
-
-1. **Single-file validations**: Use Pydantic’s validators to constrain data in each `BaseConfig` subclass (e.g., `FeatureConfig`, `AwesomeFeatureConfig`). You can catch and translate `ValidationError` into `BaseValidationError`.  
-2. **Cross-file validations**: Define small, typed functions with the `@register_validation` decorator. They are automatically discovered and run by `run_validations()`.  
-3. **Easy to Extend**: 
-   - To add **new config**: create a new `.json` file + new Pydantic model + `@register_config_model`.  
-   - To add **new cross-file checks**: write a new function with `@register_validation`.  
-
-This approach keeps your code **modular**, **maintainable**, and **testable**, avoiding monolithic loaders or validators. Enjoy a clear separation of responsibilities, allowing each component (loader, single-file validation, cross-file validation) to evolve independently.
+Enjoy creating new configs and validations in this **clean, scalable architecture**! 
