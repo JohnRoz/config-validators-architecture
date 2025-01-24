@@ -3,7 +3,7 @@ from typing import Iterable
 from ..models.feature_config import FeatureConfig
 from ..models.subfeature_config import SubFeatureConfig
 from . import validations_runner
-from .validation_exceptions import BaseValidationError
+from .validation_exceptions import BaseCrossConfigValidationError, BaseValidationError
 
 
 @validations_runner.register_validation
@@ -18,7 +18,7 @@ def validate_feature_not_reference_non_existant_subfeature(
     if undefined_subfeatures := all_referenced_subfeatures - all_subfeature_names:
         for undefined_subfeature in undefined_subfeatures:
             validation_errors.append(
-                BaseValidationError(
+                BaseCrossConfigValidationError(
                     f"Referenced subfeature {undefined_subfeature} is undefined",
                     undefined_subfeature=undefined_subfeature,
                 )
