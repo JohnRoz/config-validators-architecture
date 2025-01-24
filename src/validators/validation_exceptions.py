@@ -28,3 +28,11 @@ class BaseValidationError(BaseException):
 
 class InvalidValidationFunctionSignature(BaseValidationError):
     pass
+
+
+class BaseSingleConfigValidationError(BaseValidationError):
+    pass
+
+
+class BaseCrossConfigValidationError(BaseValidationError):
+    pass
