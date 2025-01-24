@@ -19,11 +19,12 @@ class BaseValidationError(BaseException):
             f"ERROR: "
             + self.error_msg
             + _NEW_LINE
-            + _NEW_LINE.join(
-                f"{kwarg_name}={str(kwarg_value)}"
-                for kwarg_name, kwarg_value in self._error_kwargs.items()
-            )
+            + _NEW_LINE.join(f"{kwarg_name}={str(kwarg_value)}" for kwarg_name, kwarg_value in self._error_kwargs.items())
         )
 
     def __repr__(self) -> str:
         return str(self)
+
+
+class InvalidValidationFunctionSignature(BaseValidationError):
+    pass

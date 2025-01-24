@@ -2,11 +2,11 @@ from typing import Iterable
 
 from ..models.feature_config import FeatureConfig
 from ..models.subfeature_config import SubFeatureConfig
-from . import register_validator
+from . import validations_runner
 from .validation_exceptions import BaseValidationError
 
 
-@register_validator(FeatureConfig, SubFeatureConfig)
+@validations_runner.register_validation
 def validate_feature_not_reference_non_existant_subfeature(
     feature_config: FeatureConfig, subfeature_config: SubFeatureConfig
 ) -> Iterable[BaseValidationError]:
