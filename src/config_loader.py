@@ -2,14 +2,14 @@ import json
 from pathlib import Path
 from typing import Callable, TypeVar
 
-from pydantic import BaseModel
+from src.models.base_config import BaseConfig
 
-_MODEL_REGISTRY: dict[str, type[BaseModel]] = {}
-_CONFIG_TYPE = TypeVar("_CONFIG_TYPE", bound=type[BaseModel])
+_MODEL_REGISTRY: dict[str, type[BaseConfig]] = {}
+_T_CONFIG_TYPE = TypeVar("_T_CONFIG_TYPE", bound=type[BaseConfig])
 
 
-def register_config_model(*, filename: str) -> Callable[[_CONFIG_TYPE], _CONFIG_TYPE]:
-    def decorator(cls: _CONFIG_TYPE) -> _CONFIG_TYPE:
+def register_config_model(*, filename: str) -> Callable[[_T_CONFIG_TYPE], _T_CONFIG_TYPE]:
+    def decorator(cls: _T_CONFIG_TYPE) -> _T_CONFIG_TYPE:
         _MODEL_REGISTRY[filename] = cls
         return cls
 
@@ -22,7 +22,7 @@ class ConfigLoader:
     def __init__(self, configs_dir: Path) -> None:
         self.configs_dir: Path = configs_dir
 
-    def load_configs(self) -> dict:
+    def load_configs(self) -> dict[type[BaseConfig], BaseConfig]:
         configs = {}
 
         for file in self.configs_dir.glob("*.json"):
