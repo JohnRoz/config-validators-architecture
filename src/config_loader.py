@@ -6,8 +6,8 @@ from typing import Callable, Iterable, TypeVar
 import pydantic
 
 from src.exceptions import (
+    BaseException,
     BaseSingleConfigValidationError,
-    BaseValidationError,
     ConfigCreationFailedError,
 )
 from src.models.base_config import BaseConfig
@@ -72,6 +72,6 @@ class ConfigLoader:
         config_load_result = self._load_configs()
 
         if should_raise_on_error and config_load_result.single_config_validation_errors:
-            raise BaseValidationError.group_errors(config_load_result.single_config_validation_errors)
+            raise BaseException.group_errors(config_load_result.single_config_validation_errors)
 
         return config_load_result

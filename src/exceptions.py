@@ -11,6 +11,14 @@ class BaseException(Exception):
         self.error_msg = err_msg
         self._error_kwargs = kwargs
 
+    @classmethod
+    def group_errors(cls, errors: Iterable["BaseException"]) -> Self:
+        _NEWLINE = "\n"
+        _LINESEPARATOR = "#"
+        msg = _NEWLINE + (_NEWLINE + _LINESEPARATOR * 80 + _NEWLINE).join(str(err) for err in errors)
+
+        return cls(msg)
+
     def __str__(self) -> str:
         _NEW_LINE = "\n"
         return (
@@ -25,13 +33,7 @@ class BaseException(Exception):
 
 
 class BaseValidationError(BaseException):
-    @classmethod
-    def group_errors(cls, errors: Iterable[BaseException]) -> Self:
-        _NEWLINE = "\n"
-        _LINESEPARATOR = "#"
-        msg = _NEWLINE + (_NEWLINE + _LINESEPARATOR * 80 + _NEWLINE).join(str(err) for err in errors)
-
-        return cls(msg)
+    pass
 
 
 class InvalidValidationFunctionSignature(BaseValidationError):

@@ -1,7 +1,11 @@
 import inspect
 from typing import Callable, Iterable, TypeVar
 
-from ..exceptions import BaseValidationError, InvalidValidationFunctionSignature
+from ..exceptions import (
+    BaseException,
+    BaseValidationError,
+    InvalidValidationFunctionSignature,
+)
 from ..models.base_config import BaseConfig
 
 _ValidationFunction = Callable[..., Iterable[BaseValidationError]]
@@ -30,7 +34,7 @@ def run_validations(
     errors = _run_validations(available_configs=available_configs)
 
     if should_raise_on_error and errors:
-        raise BaseValidationError.group_errors(errors)
+        raise BaseException.group_errors(errors)
 
     return errors
 
