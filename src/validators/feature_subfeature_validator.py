@@ -1,9 +1,9 @@
 from typing import Iterable
 
+from ..exceptions import BaseCrossConfigValidationError, BaseValidationError
 from ..models.feature_config import FeatureConfig
 from ..models.subfeature_config import SubFeatureConfig
 from . import validations_runner
-from .validation_exceptions import BaseCrossConfigValidationError, BaseValidationError
 
 
 @validations_runner.register_validation

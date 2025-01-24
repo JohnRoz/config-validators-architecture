@@ -5,12 +5,12 @@ from typing import Callable, Iterable, TypeVar
 
 import pydantic
 
-from src.models.base_config import BaseConfig
-from src.models.exceptions import ConfigCreationFailedError
-from src.validators.validation_exceptions import (
+from src.exceptions import (
     BaseSingleConfigValidationError,
     BaseValidationError,
+    ConfigCreationFailedError,
 )
+from src.models.base_config import BaseConfig
 
 _MODEL_REGISTRY: dict[str, type[BaseConfig]] = {}
 _T_CONFIG_TYPE = TypeVar("_T_CONFIG_TYPE", bound=type[BaseConfig])

@@ -22,3 +22,23 @@ class BaseException(Exception):
 
     def __repr__(self) -> str:
         return str(self)
+
+
+class BaseValidationError(BaseException):
+    pass
+
+
+class InvalidValidationFunctionSignature(BaseValidationError):
+    pass
+
+
+class BaseSingleConfigValidationError(BaseValidationError):
+    pass
+
+
+class BaseCrossConfigValidationError(BaseValidationError):
+    pass
+
+
+class ConfigCreationFailedError(BaseException):
+    pass

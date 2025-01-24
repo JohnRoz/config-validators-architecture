@@ -1,11 +1,8 @@
 import inspect
 from typing import Callable, Iterable, TypeVar
 
+from ..exceptions import BaseValidationError, InvalidValidationFunctionSignature
 from ..models.base_config import BaseConfig
-from .validation_exceptions import (
-    BaseValidationError,
-    InvalidValidationFunctionSignature,
-)
 
 _ValidationFunction = Callable[..., Iterable[BaseValidationError]]
 _T_VALIDATION_FUNCTION = TypeVar("_T_VALIDATION_FUNCTION", bound=_ValidationFunction)
