@@ -24,7 +24,20 @@ def register_validation(func: _T_VALIDATION_FUNCTION) -> _T_VALIDATION_FUNCTION:
     return func
 
 
-def run_validations(available_configs: dict[type[BaseConfig], BaseConfig]) -> Iterable[BaseValidationError]:
+def run_validations(
+    available_configs: dict[type[BaseConfig], BaseConfig], should_raise_on_error: bool = False
+) -> Iterable[BaseValidationError]:
+    errors = _run_validations(available_configs=available_configs)
+
+    if should_raise_on_error and errors:
+        raise BaseValidationError.group_errors(errors)
+
+    return errors
+
+
+def _run_validations(
+    available_configs: dict[type[BaseConfig], BaseConfig],
+) -> Iterable[BaseValidationError]:
     validation_errors: list[BaseValidationError] = []
 
     for validation_func, required_configs in _VALIDATORS:

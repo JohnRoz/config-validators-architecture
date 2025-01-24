@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Iterable, Self
 
 
 class BaseException(Exception):
@@ -25,7 +25,13 @@ class BaseException(Exception):
 
 
 class BaseValidationError(BaseException):
-    pass
+    @classmethod
+    def group_errors(cls, errors: Iterable[BaseException]) -> Self:
+        _NEWLINE = "\n"
+        _LINESEPARATOR = "#"
+        msg = _NEWLINE + (_NEWLINE + _LINESEPARATOR * 80 + _NEWLINE).join(str(err) for err in errors)
+
+        return cls(msg)
 
 
 class InvalidValidationFunctionSignature(BaseValidationError):

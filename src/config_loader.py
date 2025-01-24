@@ -72,7 +72,6 @@ class ConfigLoader:
         config_load_result = self._load_configs()
 
         if should_raise_on_error and config_load_result.single_config_validation_errors:
-            msg = ("\n" + "#" * 80 + "\n").join(str(err) for err in config_load_result.single_config_validation_errors)
-            raise BaseValidationError(msg)
+            raise BaseValidationError.group_errors(config_load_result.single_config_validation_errors)
 
         return config_load_result
