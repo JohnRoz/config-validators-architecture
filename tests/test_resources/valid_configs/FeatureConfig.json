@@ -1,0 +1,17 @@
+{
+    "features": [
+        {
+            "name": "MainFeature",
+            "subfeature_names": [
+                "sub_1",
+                "sub_2"
+            ]
+        },
+        {
+            "name": "SecondaryFeature",
+            "subfeature_names": [
+                "sub_2"
+            ]
+        }
+    ]
+}

@@ -1,0 +1,10 @@
+{
+    "subfeatures": [
+        {
+            "name": "sub_1"
+        },
+        {
+            "name": "sub_2"
+        }
+    ]
+}
