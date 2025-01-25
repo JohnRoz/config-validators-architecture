@@ -38,6 +38,10 @@ class ConfigLoader:
         if isinstance(configs_dir, str):
             configs_dir = Path(configs_dir)
 
+        if not configs_dir.exists():
+            err_msg = "Directory specified as configs_dir argument does not exist"
+            raise BaseExceptionGroup(err_msg, [ConfigCreationFailedError(err_msg, configs_dir=configs_dir)])
+
         return cls(configs_dir).load_configs(should_raise_on_error=should_raise_on_error)
 
     @property
