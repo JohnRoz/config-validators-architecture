@@ -1,7 +1,5 @@
-from pathlib import Path
-
 from src.config_loader import ConfigLoader
-from src.validators import validations_runner
+from src.cross_config_validations import validations_runner
 
 # Example main:
 

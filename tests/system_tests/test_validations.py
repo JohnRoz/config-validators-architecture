@@ -1,8 +1,8 @@
 from typing import Iterable
 
 from src.config_loader import ConfigLoader
+from src.cross_config_validations import validations_runner
 from src.exceptions import BaseValidationError
-from src.validators import validations_runner
 from tests.test_utils import (
     INVALID_CROSS_CONFIGS_PATH,
     INVALID_SINGLE_CONFIGS_PATH,
