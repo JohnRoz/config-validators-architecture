@@ -10,6 +10,7 @@ from . import validations_runner
 def validate_feature_not_reference_non_existant_subfeature(
     feature_config: FeatureConfig, subfeature_config: SubFeatureConfig
 ) -> Iterable[BaseValidationError]:
+    err_msg = "Referenced subfeature is undefined"
     validation_errors = []
 
     all_subfeature_names = {subfeature.name for subfeature in subfeature_config.subfeatures}
@@ -19,7 +20,7 @@ def validate_feature_not_reference_non_existant_subfeature(
         for undefined_subfeature in undefined_subfeatures:
             validation_errors.append(
                 BaseCrossConfigValidationError(
-                    f"Referenced subfeature {undefined_subfeature} is undefined",
+                    err_msg,
                     undefined_subfeature=undefined_subfeature,
                 )
             )
