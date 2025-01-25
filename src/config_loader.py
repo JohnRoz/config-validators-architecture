@@ -74,7 +74,7 @@ class ConfigLoader:
                 self._errors.extend(
                     [
                         BaseSingleConfigValidationError(
-                            f'Pydantic validation failed: {err.get("msg", "Unknown error")}', location=err.get("loc", [])
+                            err.get("msg", "Unknown error"), config_file=file.name, location=err.get("loc", [])
                         )
                         for err in e.errors()
                     ]

@@ -1,6 +1,6 @@
 import os
 from collections import defaultdict
-from typing import Iterable
+from typing import Any, Iterable
 
 from src.exceptions import BaseException
 
@@ -12,11 +12,10 @@ VALID_CROSS_CONFIGS_PATH = os.path.join(CROSS_CONFIGS_PATH, "valid_configs")
 INVALID_CROSS_CONFIGS_PATH = os.path.join(CROSS_CONFIGS_PATH, "invalid_configs")
 
 SINGLE_CONFIGS_PATH = os.path.join(TEST_RESOURCES_DIR, "single_configs")
-VALID_SINGLE_CONFIGS_PATH = os.path.join(SINGLE_CONFIGS_PATH, "valid_configs")
 INVALID_SINGLE_CONFIGS_PATH = os.path.join(SINGLE_CONFIGS_PATH, "invalid_configs")
 
 
-def group_error_kwargs(errors: Iterable[BaseException]) -> dict[str, list[str]]:
+def group_error_kwargs(errors: Iterable[BaseException]) -> dict[str, list[Any]]:
     error_kwd_to_values: dict[str, list[str]] = defaultdict(list)
 
     error_kwargs = [err._error_kwargs for err in errors]
