@@ -86,7 +86,7 @@ my_project/
 
 - **`config_loader.py`** uses a decorator `@register_config_model` to map JSON filenames to model classes, then loads them into memory, catching and converting Pydantic errors.  
 - **`exceptions.py`** provides our custom exceptions (`BaseValidationError`, etc.).  
-- **`base_config.py`** provides `BaseConfig` (a `pydantic.BaseModel` subclass).  
+- **`base_config.py`** `BaseConfig` provides a shared base class for all config models (if needed). It's a `pydantic.BaseModel` subclass.  
 - **`cross_config_validations_runner.py`** iterates over collected cross-file validations (using `@register_validation`) and runs them with `run_validations()`, with the config models loaded by `config_loader.py` as arguments.  
 - **`feature_subfeature_validator.py`** is an example cross-file rule that checks references from `FeatureConfig` to `SubFeatureConfig`.  
 
