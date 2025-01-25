@@ -18,8 +18,9 @@ This repository provides a robust system for defining, loading, and validating c
 
 ## Overview of the Architecture
 
-1. **`BaseConfig` (Single-File Validation Layer):**  
-   Each configuration file is defined as a subclass of `BaseConfig`, a thin wrapper around Pydantic’s `BaseModel`. This layer is actually optional, but can be beneficial to provide more control. It is used in various type hints to represent a pydantic model that is also a config.
+1. **`Config Models` (Single-File Validation Layer):** 
+   Each configuration file is defined as a subclass of `BaseConfig`. Each `ConfigModel` defines its own local validations using pydantic's `@field_validator` and/or `@model_validator` decorators (or you can use any other pydantic validator approach (like the `Annotated` approach), as specified in the [pydantic docs](https://docs.pydantic.dev/latest/concepts/validators/)). If the validations fail, the `ConfigLoader` will translate that `pydantic.ValidationError` into a `BaseSingleConfigValidationError`, and add it to a list or raise it in a `BaseExceptionGroup` - depending on the `should_raise_on_error` flag that was passed to it.
+   `BaseConfig` is a thin wrapper around Pydantic’s `BaseModel`, and is actually optional, but can be beneficial to provide more control. It is used in various type hints to represent a pydantic model that is also a config.
 
 2. **`ConfigLoader` (I/O and Registration):**  
    - Uses a registry-based approach (`@register_config_model`) to map a JSON filename to a corresponding Pydantic model.  
@@ -94,9 +95,9 @@ my_project/
 
 ## How to Use
 
-1. **Call** `ConfigLoader.load(config_dir="./some_dir"(str|pathlib.Path), should_raise_on_error=True/False)`:
+1. **Call** `ConfigLoader.load(config_dir="./some_dir" (str | pathlib.Path), should_raise_on_error=True/False)`:
    - Returns an instance of `ConfigLoader` object containing:
-     - The supplied configurations directory (as pathlib.Path).
+     - The supplied configurations directory (as `pathlib.Path`).
      - A dictionary of `{model_class: model_instance}` for each successfully loaded config.  
      - A list of errors that occurred during the load process (if any).  
    - If `should_raise_on_error=True`, it raises a `BaseExceptionGroup` immediately if there were any exceptions on load, like: Single-file validation errors, json load failures, etc.  
