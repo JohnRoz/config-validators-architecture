@@ -7,8 +7,13 @@ from src.exceptions import BaseException
 TESTS_DIR = os.path.dirname(__file__)
 TEST_RESOURCES_DIR = os.path.join(TESTS_DIR, "test_resources")
 
-VALID_CONFIGS_PATH = os.path.join(TEST_RESOURCES_DIR, "valid_configs")
-INVALID_CONFIGS_PATH = os.path.join(TEST_RESOURCES_DIR, "invalid_configs")
+CROSS_CONFIGS_PATH = os.path.join(TEST_RESOURCES_DIR, "cross_configs")
+VALID_CROSS_CONFIGS_PATH = os.path.join(CROSS_CONFIGS_PATH, "valid_configs")
+INVALID_CROSS_CONFIGS_PATH = os.path.join(CROSS_CONFIGS_PATH, "invalid_configs")
+
+SINGLE_CONFIGS_PATH = os.path.join(TEST_RESOURCES_DIR, "single_configs")
+VALID_SINGLE_CONFIGS_PATH = os.path.join(SINGLE_CONFIGS_PATH, "valid_configs")
+INVALID_SINGLE_CONFIGS_PATH = os.path.join(SINGLE_CONFIGS_PATH, "invalid_configs")
 
 
 def group_error_kwargs(errors: Iterable[BaseException]) -> dict[str, list[str]]:
