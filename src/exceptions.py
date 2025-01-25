@@ -1,4 +1,4 @@
-from typing import Any, Iterable, Self
+from typing import Any
 
 
 class BaseException(Exception):
@@ -11,14 +11,6 @@ class BaseException(Exception):
         self.error_msg = err_msg
         self._error_kwargs = kwargs
 
-    @classmethod
-    def group_errors(cls, errors: Iterable["BaseException"]) -> Self:
-        _NEWLINE = "\n"
-        _LINESEPARATOR = "#"
-        msg = _NEWLINE + (_NEWLINE + _LINESEPARATOR * 80 + _NEWLINE).join(str(err) for err in errors)
-
-        return cls(msg)
-
     def __str__(self) -> str:
         _NEW_LINE = "\n"
         return (
@@ -30,6 +22,10 @@ class BaseException(Exception):
 
     def __repr__(self) -> str:
         return str(self)
+
+
+class BaseExceptionGroup(ExceptionGroup):
+    pass
 
 
 class BaseValidationError(BaseException):

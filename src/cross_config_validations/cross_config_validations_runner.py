@@ -1,24 +1,24 @@
 from typing import Iterable
 
-from ..exceptions import BaseException, BaseValidationError
+from ..exceptions import BaseExceptionGroup, BaseValidationError
 from ..models.base_config import BaseConfig
 from .validators import VALIDATORS
 
 
 def run_validations(
     available_configs: dict[type[BaseConfig], BaseConfig], should_raise_on_error: bool = False
-) -> Iterable[BaseValidationError]:
+) -> list[BaseValidationError]:
     errors = _run_validations(available_configs=available_configs)
 
     if should_raise_on_error and errors:
-        raise BaseException.group_errors(errors)
+        raise BaseExceptionGroup("Validations resulted with the following errors:", errors)
 
     return errors
 
 
 def _run_validations(
     available_configs: dict[type[BaseConfig], BaseConfig],
-) -> Iterable[BaseValidationError]:
+) -> list[BaseValidationError]:
     validation_errors: list[BaseValidationError] = []
 
     for validation_func, required_configs in VALIDATORS:

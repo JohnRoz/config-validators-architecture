@@ -56,7 +56,7 @@ class ConfigLoader:
         self._load_configs()
 
         if should_raise_on_error and self._errors:
-            raise BaseException.group_errors(self._errors)
+            raise BaseExceptionGroup("Configurations load process resulted with the following errors:", self._errors)
 
         return self
 
