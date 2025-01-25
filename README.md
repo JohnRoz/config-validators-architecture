@@ -65,27 +65,23 @@ This repository provides a robust system for defining, loading, and validating c
 
 ```
 my_project/
-├─ src/
-│  ├─ config_loader.py           # The core loader, with a registry-based approach
-│  ├─ exceptions.py              # Custom exception classes for validation
-│  ├─ validators/
-│  │  ├─ validations_runner.py   # Register/call cross-file validators
-│  │  ├─ feature_subfeature_validator.py
-│  │  └─ ...                     # Other cross-file validators
-│  └─ models/
-│     ├─ base_config.py          # Base Pydantic model
-│     ├─ feature_config.py
-│     ├─ subfeature_config.py
-│     └─ ...                     # Additional config models
-├─ tests/
-│  └─ test_resources/
-│     ├─ valid_configs/
-│     │  ├─ FeatureConfig.json
-│     │  └─ SubFeatureConfig.json
-│     └─ invalid_configs/
-│        ├─ FeatureConfig.json
-│        └─ SubFeatureConfig.json
-└─ main.py
+├── src
+│   ├── cross_config_validations
+│   │   ├── validators                              # Validators package. All validators go here.
+│   │   │   ├── feature_subfeature_validator.py
+│   │   |   └── ...                                 # Additional validators.
+│   │   └── cross_config_validations_runner.py      # Runs all registered cross-config validators.
+│   ├── models
+│   │   ├── base_config.py                          # Optional shared base class to all the models.
+│   │   ├── database_config.py
+│   │   ├── feature_config.py
+│   │   ├── subfeature_config.py
+│   |   └── ...                                     # Additional config models. All must register using the @register_config_model decorator in order to get loaded by the config loader.
+│   ├── config_loader.py                            # Loads the available configs files according to the registered models.
+│   └── exceptions.py                               # Custom exception classes for the system.
+├── tests
+│   └── ...
+└── main.py
 ```
 
 - **`config_loader.py`** uses a decorator `@register_config_model` to map JSON filenames to model classes, then loads them into memory, catching and converting Pydantic errors.  
@@ -116,21 +112,35 @@ from pathlib import Path
 from src.config_loader import ConfigLoader
 from src.validators.validations_runner import run_validations
 
-def main():
-    loader = ConfigLoader(Path("./tests/test_resources/valid_configs"))
-    load_result = loader.load_configs(should_raise_on_error=False)
-    configs, single_file_errors = load_result.unpack()
+def main_without_raising():
+    configs_dir = "./tests/test_resources/cross_configs/invalid_configs"
+    loader = ConfigLoader.load(configs_dir)
 
-    # Print single-file errors
-    for err in single_file_errors:
-        print("Single-file validation error:", err)
+    for err in loader.config_creation_errors:
+        print(err)
 
-    # Cross-file checks
-    cross_file_errors = run_validations(configs)
-    for err in cross_file_errors:
-        print("Cross-file validation error:", err)
+    cross_config_validation_errors = cross_config_validations_runner.run_validations(loader.configs)
+    all_validation_errors = loader.single_config_validation_errors + cross_config_validation_errors
 
-    print("Done!")
+    for err in all_validation_errors:
+        print(err)
+    else:
+        print("All validations passed!")
+
+
+def main_with_raising():
+    configs_dir = "./tests/test_resources/cross_configs/invalid_configs"
+    try:
+        loader = ConfigLoader.load(configs_dir, should_raise_on_error=True)
+        cross_config_validations_runner.run_validations(loader.configs, should_raise_on_error=True)
+    except* BaseValidationError as e:
+        for validation_err in e.exceptions:
+            print("Caught a validation error:\n", validation_err)
+    except* BaseException as ex_group:
+        for err in ex_group.exceptions:
+            print(err)
+    else:
+        print("All validations passed!")
 
 if __name__ == "__main__":
     main()
@@ -173,25 +183,37 @@ Place a **`SomeNewConfig.json`** file in your configs folder (e.g., `tests/test_
 Pydantic allows you to define single-file constraints in multiple ways:
 
 - **Field constraints** (like `ge=1` above).  
-- **`@validator` or `@root_validator`** to implement custom logic.
+- **`@field_validator` or `@model_validator`** to implement custom logic.
 
 If a JSON input violates these constraints, a `pydantic.ValidationError` is raised and then translated to a `BaseSingleConfigValidationError` inside the loader.
 
-Example `@validator`:
+Example `@field_validator`:
 
 ```python
-from pydantic import validator
+from typing import Self
+from pydantic import field_validator, Field
 
 @register_config_model(filename="SomeNewConfig.json")
 class SomeNewConfig(BaseConfig):
     required_field: int
     optional_field: str | None = None
+    required_statuses: list[str] = Field(..., description="List of statuses. Must not be empty.")
 
-    @validator("required_field")
-    def check_required_field(cls, val):
+    @field_validator("required_field", mode="after")
+    @classmethod
+    def check_required_field(cls, val: int) -> int:
         if val > 100:
             raise ValueError("required_field must not exceed 100")
         return val
+
+    @model_validator(mode="after")
+    def validate(self) -> Self:
+      if not self.required_statuses:
+        raise ValueError("required_statuses must not be empty")
+      if optional_field is not None and not (0 <= self.required_field <= 100):
+        raise ValueError("If optional_field is supplied, it must be between 0 and 100 (inclusive).")
+      
+      return self
 ```
 
 ### 5.3. Register a Cross-File Validation
@@ -200,9 +222,9 @@ If you need to enforce a rule involving **multiple** config models, write a **fu
 
 1. **Annotate** the parameters with the model classes you need.  
 2. **Decorate** the function with `@register_validation`.  
-3. **Return** an iterable of `BaseValidationError` objects (or none if no issues).
+3. **Return** an iterable of `BaseValidationError` objects (or empty list if no issues).
 
-**Example** (`src/validators/some_new_cross_validator.py`):
+**Example** (`src/cross_config_validations/validators/some_new_cross_validator.py`):
 
 ```python
 from typing import Iterable
@@ -225,7 +247,7 @@ def ensure_feature_and_newconfig_are_consistent(
     return errors
 ```
 
-**Important**: Make sure the module is imported (either in `validators/__init__.py` or directly in your code) so that the decorator actually runs. Once imported, the validation is automatically executed in `run_validations()` if both `SomeNewConfig` and `FeatureConfig` are loaded.
+**Important**: Make sure the module is under the validators package so it's automatically imported and that the decorator actually runs. Once imported, the validation is automatically executed in `run_validations()` if both `SomeNewConfig` and `FeatureConfig` are loaded.
 
 ---
 
