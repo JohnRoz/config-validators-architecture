@@ -1,5 +1,5 @@
 from src.config_loader import ConfigLoader
-from src.cross_config_validations import validations_runner
+from src.cross_config_validations import cross_config_validations_runner
 
 # Example main:
 
@@ -11,7 +11,7 @@ def main():
     for err in loader.config_creation_errors:
         print(err)
 
-    cross_config_validation_errors = validations_runner.run_validations(loader.configs)
+    cross_config_validation_errors = cross_config_validations_runner.run_validations(loader.configs)
     all_validation_errors = loader.single_config_validation_errors + cross_config_validation_errors
 
     for err in all_validation_errors:

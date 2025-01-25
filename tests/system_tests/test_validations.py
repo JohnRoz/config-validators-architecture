@@ -1,7 +1,7 @@
 from typing import Iterable
 
 from src.config_loader import ConfigLoader
-from src.cross_config_validations import validations_runner
+from src.cross_config_validations import cross_config_validations_runner
 from src.exceptions import BaseValidationError
 from tests.test_utils import (
     INVALID_CROSS_CONFIGS_PATH,
@@ -14,7 +14,7 @@ from tests.test_utils import (
 def _get_cross_config_validation_errors(configs_path: str) -> Iterable[BaseValidationError]:
     loader = ConfigLoader.load(configs_path)
 
-    return validations_runner.run_validations(loader.configs)
+    return cross_config_validations_runner.run_validations(loader.configs)
 
 
 def test_validations__cross_config__invalid():
