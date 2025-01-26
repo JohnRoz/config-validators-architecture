@@ -134,11 +134,11 @@ def main_with_raising():
     try:
         loader = ConfigLoader.load(configs_dir, should_raise_on_error=True)
         cross_config_validations_runner.run_validations(loader.configs, should_raise_on_error=True)
-    except* BaseValidationError as e:
+    except BaseValidationError as e:
         for validation_err in e.exceptions:
             print("Caught a validation error:\n", validation_err)
-    except* BaseException as ex_group:
-        for err in ex_group.exceptions:
+    except BaseException as e:
+        for err in e.exceptions:
             print(err)
     else:
         print("All validations passed!")
